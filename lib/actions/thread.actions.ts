@@ -34,7 +34,7 @@ export async function createThread({
     throw new Error(`Error creating thread : ${error.message}`);
   }
 }
-
+// fetch all posts
 export async function fetchPosts(pageNumber = 1, pageSize = 20) {
   connectToDB();
   // calculate the number of posts to skip
@@ -62,6 +62,7 @@ export async function fetchPosts(pageNumber = 1, pageSize = 20) {
   return { posts, isNext };
 }
 
+// fetch threads byId
 export async function fetchThreadById(id: string) {
   connectToDB();
   try {
@@ -94,5 +95,45 @@ export async function fetchThreadById(id: string) {
     return thread;
   } catch (error: any) {
     throw new Error(`Error fetching thread : ${error.message}`);
+  }
+}
+
+// add comment to thread
+export async function addCommentToThread(
+  threadId: string,
+  commentText: string,
+  userId: string,
+  path: string
+) {
+  connectToDB();
+  try {
+    // adding a comment to a thread
+
+    // find original thread by id
+    const originalThread = await Thread.findById(threadId);
+
+    if (!originalThread) {
+      throw new Error("Thread not found");
+    }
+
+    // create a new thread with the comment text
+    const commentThread = new Thread({
+      text: commentText,
+      author: userId,
+      parentId: threadId,
+    });
+
+    // save the new thread
+    const savedCommentThread = await commentThread.save();
+
+    // update the original thread to include the new comment
+    originalThread.children.push(savedCommentThread._id);
+
+    // save the original thread
+    await originalThread.save();
+
+    revalidatePath(path);
+  } catch (error: any) {
+    throw new Error(`Error adding comment to thread : ${error.message}`);
   }
 }
